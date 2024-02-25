@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Unbounded&display=swap');
+
+*{
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+  -webkit-touch-callout: none;
+    -webkit-user-select: none;
+     -khtml-user-select: none; 
+       -moz-user-select: none; 
+        -ms-user-select: none; 
+            user-select: none; 
+}
+#c{
+	width: 100vw;
+	height: 100vh;
+	cursor: crosshair;
+	image-rendering: pixelated;
+}
+.hidden{
+	display: none;
+}
+#alive{
+	font-family: "Unbounded", cursive;
+	position: fixed;
+	bottom: 5px;
+	right: 2vmin;
+	font-size: 4vmin;
+	color: white;
+}
+#ammo{
+	font-family: "Unbounded", cursive;
+	position: fixed;
+	top: 25px;
+	right: 2vmin;
+	font-size: 4vmin;
+	color: white;
+}
+#gameover{
+	width: 100vw;
+	height: 100vh;
+	background-color: black;
+	color: white;
+	font-size: 10vmin;
+	font-family: "Unbounded", cursive;
+	position: fixed;
+	top: 0;
+	left: 0;
+	padding-top: 20vmin;
+	text-align: center;
+	display: none;
+}
+#menu{
+	width: 100vw;
+	height: 100vh;
+	background-color: black;
+	position: fixed;
+	top: 0;
+	left: 0;
+	cursor: pointer;
+}
+#title{
+	margin-top: 20vmin;
+	display: inline-block;
+	
+}
+#start{
+	margin-top: 30vmin;
+	border: 1vmin solid white;
+	display: inline-block;
+	padding: 3vmin;
+	border-radius: 5vmin;
+	cursor: pointer;
+	transition: transform .2s;
+}
+#start:hover{
+	transform: scale(1.1);
+}
+ .rainbow{
+	background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+} 
