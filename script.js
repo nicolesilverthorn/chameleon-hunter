@@ -678,3 +678,394 @@ function menu(){
 	}
 }
 menu();
+
+
+
+
+
+
+
+var Joystick = (function() {
+  function fromCenter(value) {
+    return "calc(50% + " + value + "px)";
+  }
+
+  function snapToInterval(value, interval) {
+    return Math.round(value / interval) * interval;
+  }
+
+  function radToDeg(angle) {
+    return ((angle * 180) / Math.PI + 360) % 360;
+  }
+
+  function Joystick(mode, type, outerWidth, innerWidth, styles) {
+    // DOM
+    var outerStyles = {
+      touchAction: "none",
+      width: "120px",
+      height: "120px",
+      borderRadius: "50%",
+      backgroundColor: "rgba(120, 120, 120, 0.3)"
+    };
+
+    var innerStyles = {
+      width: "60px",
+      height: "60px",
+      borderRadius: "50%",
+      position: "relative",
+      backgroundColor: "#333",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      boxShadow:
+        "inset 0 10px 14px 0 rgba(255, 255, 255, 0.5), inset 0 -10px 14px 0 rgba(0, 0, 0, 0.5), 0 5px 15px 0 rgba(0, 0, 0, 0.8)"
+    };
+
+    this.outer = document.createElement("div");
+    this.inner = document.createElement("div");
+    this.outer.appendChild(this.inner);
+    for (var key in outerStyles) {
+      this.outer.style[key] = outerStyles[key];
+    }
+    for (var key in innerStyles) {
+      this.inner.style[key] = innerStyles[key];
+    }
+    document.getElementById("gameControls").appendChild(this.outer);
+
+    // How the joypad reacts when released
+    if (mode === undefined) {
+      mode = Joystick.modes.SPRING_IN;
+    }
+    this.mode = mode;
+
+    // Whether the joystick is smooth or moves by increments
+    if (type === undefined) {
+      type = Joystick.types.SMOOTH;
+    }
+    this.type = type;
+
+    // Bind event handlers
+    this.handleTouch = this.handleTouch.bind(this);
+    this.handleTouchEnd = this.handleTouchEnd.bind(this);
+
+    // Minimum relative distance travelled by joypad to trigger action
+    this.THRESHOLD_X = 0.6;
+    this.THRESHOLD_Y = 0.6;
+
+    // Maximum radius the joypad can travel
+    this.MAX_RADIUS = (this.outer.clientWidth - this.inner.clientWidth) / 2;
+    this.MAX_RADIUS_SQUARED = Math.pow(this.MAX_RADIUS, 2);
+
+    // Relative horizontal displacement
+    this.relX = 0;
+
+    // Relative vertical displacement
+    this.relY = 0;
+  }
+
+  Joystick.modes = {
+    SPRING_IN: 0,
+    SPRING_OUT: 1,
+    STATIC: 2
+  };
+  Joystick.types = {
+    SMOOTH: 0, // any game
+    ARCADE: 1, // fighting games
+    D_PAD: 2 // directional pad for retro games
+  };
+
+  Object.defineProperty(Joystick.prototype, "angle", {
+    get() {
+      return Math.atan2(this.relY, this.relX);
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "relRadiusSquared", {
+    get() {
+      return Math.pow(this.relX, 2) + Math.pow(this.relY, 2);
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "center", {
+    get() {
+      var rect = this.outer.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "UP", {
+    get() {
+      Math.abs(this.relY) >= this.THRESHOLD_Y && this.relY < 0;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "DOWN", {
+    get() {
+      Math.abs(this.relY) >= this.THRESHOLD_Y && this.relY > 0;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "LEFT", {
+    get() {
+      Math.abs(this.relX) >= this.THRESHOLD_X && this.relX < 0;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Object.defineProperty(Joystick.prototype, "RIGHT", {
+    get() {
+      Math.abs(this.relX) >= this.THRESHOLD_X && this.relX > 0;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Joystick.prototype.update = function() {
+    this.inner.style.left = fromCenter(this.MAX_RADIUS * this.relX);
+    this.inner.style.top = fromCenter(this.MAX_RADIUS * this.relY);
+  };
+
+  Joystick.prototype.handleTouch = function handleTouch(event) {
+    event.preventDefault();
+
+    // Previous values for comparison
+    var lastAngle = this.angle;
+    var lastRelX = this.relX;
+    var lastRelY = this.relY;
+    var lastRadiusSquared = this.relRadiusSquared * this.MAX_RADIUS_SQUARED;
+
+    // retrieve the touch associated with this event
+    var eventTouch;
+    for (var i = 0, len = event.touches.length; i < len; i++) {
+      var touch = event.touches.item(i);
+      if (touch.target === this.outer || touch.target === this.inner) {
+        eventTouch = touch;
+        break;
+      }
+    }
+
+    var deltaX = eventTouch.clientX - this.center.x;
+    var deltaY = eventTouch.clientY - this.center.y;
+    var radiusSquared = Math.pow(deltaX, 2) + Math.pow(deltaY, 2);
+
+    // confine joypad to the outer circle
+    this.inner.style.transition = "";
+    if (this.type === Joystick.types.SMOOTH) {
+      if (radiusSquared > this.MAX_RADIUS_SQUARED) {
+        var angle = Math.atan2(deltaY, deltaX);
+        this.relX = Math.cos(angle);
+        this.relY = Math.sin(angle);
+      } else {
+        this.relX = deltaX / this.MAX_RADIUS;
+        this.relY = deltaY / this.MAX_RADIUS;
+      }
+    }
+
+    if (this.type === Joystick.types.ARCADE) {
+      var angle = Math.atan2(deltaY, deltaX);
+      var snappedAngle = snapToInterval(angle, Math.PI / 4);
+      var c = Math.cos(snappedAngle);
+      var s = Math.sin(snappedAngle);
+      var thresholdRadiusSquared =
+        (Math.pow(this.THRESHOLD_X, 2) + Math.pow(this.THRESHOLD_Y, 2)) *
+        this.MAX_RADIUS_SQUARED;
+
+      if (radiusSquared > thresholdRadiusSquared) {
+        // vibrate
+        if (
+          radToDeg(lastAngle) !== radToDeg(snappedAngle) ||
+          lastRadiusSquared < thresholdRadiusSquared
+        ) {
+          navigator.vibrate(4);
+        }
+        this.relX = c;
+        this.relY = s;
+      } else {
+        // vibrate
+        if (lastRadiusSquared > thresholdRadiusSquared) {
+          navigator.vibrate(1);
+        }
+        this.relX = this.relY = 0;
+      }
+    }
+
+    if (this.type === Joystick.types.D_PAD) {
+      var angle = Math.atan2(deltaY, deltaX);
+      var snappedAngle = snapToInterval(angle, Math.PI / 2);
+
+      var c = Math.cos(snappedAngle);
+      var s = Math.sin(snappedAngle);
+      var thresholdRadiusSquared =
+        (Math.pow(this.THRESHOLD_X, 2) + Math.pow(this.THRESHOLD_Y, 2)) *
+        this.MAX_RADIUS_SQUARED;
+      if (radiusSquared > thresholdRadiusSquared) {
+        if (
+          radToDeg(lastAngle) !== radToDeg(snappedAngle) ||
+          lastRadiusSquared < thresholdRadiusSquared
+        ) {
+          navigator.vibrate(4);
+        }
+        this.relX = c;
+        this.relY = s;
+      } else {
+        if (lastRadiusSquared > thresholdRadiusSquared) {
+          navigator.vibrate(1);
+        }
+        this.relX = this.relY = 0;
+      }
+    }
+    this.update();
+  };
+
+  Joystick.prototype.handleTouchEnd = function handleTouchEnd(event) {
+    event.preventDefault();
+    this.inner.style.transition = "all 0.05s ease-in-out";
+
+    // vibrate
+    if (this.relRadiusSquared > 0) {
+      navigator.vibrate(1);
+    }
+
+    if (this.mode === Joystick.modes.SPRING_IN) {
+      this.relX = this.relY = 0;
+    }
+    if (this.mode === Joystick.modes.SPRING_OUT) {
+      var a = this.angle;
+      this.relX = Math.cos(a);
+      this.relY = Math.sin(a);
+    }
+    this.update();
+  };
+
+  Joystick.prototype.bindEvents = function bindEvents() {
+    this.outer.addEventListener("touchstart", this.handleTouch);
+    this.outer.addEventListener("touchmove", this.handleTouch);
+    this.outer.addEventListener("touchend", this.handleTouchEnd);
+  };
+
+  Joystick.prototype.unbindEvents = function unbindEvents() {
+    this.outer.removeEventListener("touchstart", this.handleTouch);
+    this.outer.removeEventListener("touchmove", this.handleTouch);
+    this.outer.removeEventListener("touchend", this.handleTouchEnd);
+  };
+
+  return Joystick;
+})();
+
+var joystick = new Joystick(Joystick.modes.SPRING_IN, Joystick.types.ARCADE);
+joystick.bindEvents();
+
+// START CANVAS
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+var now = Date.now();
+var then = now;
+
+var square = {
+  width: 20,
+  height: 20,
+  x: 0,
+  y: 0,
+  vx: 0,
+  vy: 0,
+  maxSpeed: 300,
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    if (this.right > canvas.width) {
+      this.right = canvas.width;
+    }
+    if (this.left < 0) {
+      this.x = 0;
+    }
+    if (this.bottom > canvas.height) {
+      this.bottom = canvas.height;
+    }
+    if (this.top < 0) {
+      this.y = 0;
+    }
+  },
+  render(ctx) {
+    console.log(ctx, this);
+    ctx.save();
+    ctx.fillStyle = "red";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+    ctx.restore();
+  }
+}
+  
+Object.defineProperties(square, {
+  left: {
+    get() {
+      return this.x;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  right: {
+    get() {
+      return this.x + this.width;
+    },
+    set(right) {
+      this.x = right - this.width;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  top: {
+    get() {
+      return this.y;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  bottom: {
+    get() {
+      return this.y + this.height;
+    },
+    set(bottom) {
+      this.y = bottom - this.width;
+    },
+    enumerable: true,
+    configurable: true
+  }
+})
+
+function step() {
+  requestAnimationFrame(step);
+  then = now;
+  now = Date.now();
+  var dt = (now - then) / 1000;
+  handleInput();
+  update(dt);
+  render();
+}
+
+function handleInput() {
+  square.vx = joystick.relX * square.maxSpeed;
+  square.vy = joystick.relY * square.maxSpeed;
+}
+function update(dt) {
+  square.update(dt);
+}
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  square.render(ctx);
+}
+
+requestAnimationFrame(step);
