@@ -1,45 +1,4 @@
-// If you want to increase the difficulty, change line 43ish from 30 to however many lizards you want on the map
-gsap.config({trialWarn: false});
-var outerjstk = document.getElementById('outer-jstk')
-var innerjstk = document.getElementById('inner-jstk')
-var rocket = document.getElementById('c')
-
-Draggable.create(innerjstk, {
-  onDrag: function() {  
-    var x = this.x
-    var y = -this.y
-    var angle = (Math.atan(y/x)*180)/Math.PI
-    var radius = Math.sqrt((x * x) + (y * y))
-    var dist = (outerjstk.offsetWidth)/2
-    if (radius > dist) {this.endDrag()}
-
-    // Getting angle for rotation
-    if (x==0 && y>0) {
-      angle = 0
-    }else if (x==0 && y<0) {
-      angle = 180
-    }else if (x>0 && y==0) {
-      angle = 90
-    }else if (x<0 && y==0) {
-      angle = -90
-    }else if (x>0 && y>0) {
-      angle = 90 - angle
-    }else if (x>0 && y<0) {
-      angle = 90 + (-angle)
-    }else if (x<0 && y<0) {
-      angle = -90 - angle
-    }else if (x<0 && y>0) {
-      angle = -90 + (-angle)
-    } 
-    gsap.to(rocket, {duration:2, physics2D: {velocity:50, angle:angle-90}, ease:'power3', rotation:angle + '_short', overwrite:'auto'})
-  },
-  
-  onDragEnd: function() {
-    gsap.to(innerjstk, {x:0, y:0, duration:1, ease:'elastic'})
-  }
-})
-
-
+// If you want to increase the difficulty, change line 43 from 30 to however many lizards you want on the map
 
 var render, isRunning = false, lizards, resolution = 1;
 function getWH(){
